@@ -44,46 +44,52 @@ function simulateFetch(
 }
 
 // Create mock `pm` object for Postman-style testing
-const pm = {
-  response: {
-    code: 200, // Mock response code (this can be modified based on input)
-    responseTime: 120, // Mock response time (can be dynamic based on input)
-    json: () => ({ message: "Success" }), // Mock JSON response
-  },
-  test: (name, fn) => {
-    let result = { name, status: "", message: "" };
-    try {
-      fn();
-      result.status = "success";
-      result.message = "Test passed successfully";
-    } catch (err) {
-      result.status = "fail";
-      result.message = err.message;
-    }
 
-    // Send result back to main thread
-    self.clients.matchAll().then((all) =>
-      all.forEach((client) => {
-        client.postMessage({ type: "testResult", result });
-      }),
-    );
-  },
-  expect: chai.expect,
-  // Replace Cheerio with browser-native DOMParser
-  parseHTML: (htmlString) => {
-    const parser = new DOMParser();
-    return parser.parseFromString(htmlString, "text/html");
-  },
+const safeEval = async (code, context = {}) => {
+  // Wrapping code in an async function to support await
+  const asyncCode = `(async () => { ${code} })()`;
+
+  return Function(
+    ...Object.keys(context),
+    `"use strict"; return ${asyncCode};`,
+  )(...Object.values(context));
 };
 
 // Listen for incoming messages (from main thread)
 self.addEventListener("message", async (event) => {
   const userCode = event.data.code;
 
-  console.log(userCode);
   try {
     // Execute the user's code in a safe scope
-    eval(userCode);
+    safeEval(userCode, {
+      pm: {
+        response: simulateFetch(mockJsonData),
+        test: (name, fn) => {
+          let result = { name, status: "", message: "" };
+          try {
+            fn();
+            result.status = "success";
+            result.message = "Test passed successfully";
+          } catch (err) {
+            result.status = "fail";
+            result.message = err.message;
+          }
+
+          // Send result back to main thread
+          self.clients.matchAll().then((all) =>
+            all.forEach((client) => {
+              client.postMessage({ type: "testResult", result });
+            }),
+          );
+        },
+        expect: chai.expect,
+        // Replace Cheerio with browser-native DOMParser
+        parseHTML: (htmlString) => {
+          const parser = new DOMParser();
+          return parser.parseFromString(htmlString, "text/html");
+        },
+      },
+    });
   } catch (err) {
     // Send back error if user code execution fails
     self.clients.matchAll().then((all) =>
