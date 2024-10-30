@@ -48,8 +48,7 @@
       return response;
     }
 
-    window.pm = {
-      response: simulateFetch(mockJsonData),
+    const pm = {
       async sendRequest(requestOptions) {
         try {
           const response = await fetch(requestOptions.url, {
@@ -73,6 +72,7 @@
           result.status = "fail";
           result.message = err.message;
         }
+        console.log(pm, this, window);
 
         // Send result to parent
         window.parent.postMessage({type: "testResult", result}, "*");
@@ -99,11 +99,11 @@
     const safeEval = async (code, context = {}) => {
       // Wrapping code in an async function to support await
       const asyncCode = `(async () => { ${code} })()`;
+      const userFunction = new Function(
+        `"use strict"; console.log(pm, this, window); return ${asyncCode};`,
+      ).bind(context);
 
-      return Function(
-        ...Object.keys(context),
-        `"use strict"; return ${asyncCode};`,
-      )(...Object.values(context));
+      return userFunction(context);
     };
 
     window.addEventListener("message", (event) => {

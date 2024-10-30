@@ -9,8 +9,8 @@ export default function App() {
     pm.expect(pm.response.status).to.equal(200);
   });
 
-    const response = await pm.response.json()
-    console.log(response)
+  const response = await pm.response.json()
+  console.log(response)
   pm.test("Response contains message", function () {
     pm.expect(response).to.have.property('message', 'Success');
   });    
@@ -48,7 +48,7 @@ export default function App() {
       if (mode === "worker") {
         await handleModeChange({ target: { value: mode } });
         if (worker) {
-          worker.postMessage({ code: code });
+          worker.postMessage({ code: code, response: { a: "b" } });
         }
       }
 

@@ -2,10 +2,6 @@
 importScripts("https://cdnjs.cloudflare.com/ajax/libs/chai/4.3.4/chai.min.js");
 
 // Mock data from your API response
-const mockJsonData = {
-  key1: "value1",
-  key2: "value2",
-};
 
 const mockHtmlData = `
   <div>
@@ -55,42 +51,49 @@ const safeEval = async (code, context = {}) => {
   )(...Object.values(context));
 };
 
+const globalPm = {
+  test: (name, fn) => {
+    let result = { name, status: "", message: "" };
+    try {
+      fn();
+      result.status = "success";
+      result.message = "Test passed successfully";
+    } catch (err) {
+      result.status = "fail";
+      result.message = err.message;
+    }
+
+    // Send result back to main thread
+    self.clients.matchAll().then((all) =>
+      all.forEach((client) => {
+        client.postMessage({ type: "testResult", result });
+      }),
+    );
+  },
+  expect: chai.expect,
+  // Replace Cheerio with browser-native DOMParser
+  parseHTML: (htmlString) => {
+    const parser = new DOMParser();
+    return parser.parseFromString(htmlString, "text/html");
+  },
+};
+
 // Listen for incoming messages (from main thread)
 self.addEventListener("message", async (event) => {
   const userCode = event.data.code;
+  const response = event.data.response;
 
   try {
     // Execute the user's code in a safe scope
     safeEval(userCode, {
+      console: console,
       pm: {
-        response: simulateFetch(mockJsonData),
-        test: (name, fn) => {
-          let result = { name, status: "", message: "" };
-          try {
-            fn();
-            result.status = "success";
-            result.message = "Test passed successfully";
-          } catch (err) {
-            result.status = "fail";
-            result.message = err.message;
-          }
-
-          // Send result back to main thread
-          self.clients.matchAll().then((all) =>
-            all.forEach((client) => {
-              client.postMessage({ type: "testResult", result });
-            }),
-          );
-        },
-        expect: chai.expect,
-        // Replace Cheerio with browser-native DOMParser
-        parseHTML: (htmlString) => {
-          const parser = new DOMParser();
-          return parser.parseFromString(htmlString, "text/html");
-        },
+        response: simulateFetch(response),
+        ...globalPm,
       },
     });
   } catch (err) {
+    console.log(err);
     // Send back error if user code execution fails
     self.clients.matchAll().then((all) =>
       all.forEach((client) => {
