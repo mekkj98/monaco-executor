@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import MonacoEditor from "./components/editor";
 import SafeCodeExecutorIframe from "./components/iframe";
 import { safeEval } from "./components/eval";
+import { validateUserScript } from "./libs/executor/validator";
 
 export default function App() {
   const [code, setCode] = useState(`
@@ -22,6 +23,7 @@ export default function App() {
     useState<ServiceWorkerRegistration | null>(null);
   const [worker, setWorker] = useState<ServiceWorker | null>(null);
 
+  const [markers, setMarkers] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [testResults, setTestResults] = useState<
     Array<{ name: string; status: string; message: string }>
@@ -45,6 +47,12 @@ export default function App() {
       setTestResults([]);
       setError(null);
       window.removeEventListener("message", returnPostBack);
+
+      const result = validateUserScript(code);
+      console.log(result);
+      setMarkers(result.markers);
+      if (!result.isValid) return;
+
       if (mode === "worker") {
         await handleModeChange({ target: { value: mode } });
         if (worker) {
@@ -111,7 +119,7 @@ export default function App() {
         </select>
       </div>
       <div style={{ width: "100%" }}>
-        <MonacoEditor value={code} onChange={onChange} />
+        <MonacoEditor markers={markers} value={code} onChange={onChange} />
       </div>
       <div>
         <button onClick={handleSubmit}>execute</button>
