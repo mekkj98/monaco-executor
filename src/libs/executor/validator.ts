@@ -74,7 +74,7 @@ export function validateUserScript(userCode: string) {
     "removeEventListener",
   ];
 
-  const pmPrefix = "pm.";
+  // const pmPrefix = "pm.";
   let isValid = true;
   let messages = [];
   let markers = [];
@@ -88,13 +88,13 @@ export function validateUserScript(userCode: string) {
     walk.simple(ast, {
       Identifier(node) {
         // Check for restricted identifiers (e.g., document, window)
-        console.log("identifier", node);
+        // console.log("identifier", node);
         if (disallowedIdentifiers.includes(node.name)) {
           isValid = false;
           messages.push(
             `Invalid identifier '${node.name}' detected. Direct access to global objects is not allowed.`,
           );
-          console.log(node.loc, "$loc", node);
+          // console.log(node.loc, "$loc", node);
           if (disallowedIdentifiers.includes(node.name)) {
             markers.push({
               message: `Invalid identifier '${node.name}' detected.`,
@@ -109,7 +109,7 @@ export function validateUserScript(userCode: string) {
       },
       CallExpression(node) {
         // Check for disallowed functions (e.g., eval, Function)
-        console.log("CallExpression", node);
+        // console.log("CallExpression", node);
         if (
           node.callee.type === "Identifier" &&
           disallowedFunctions.includes(node.callee.name)
@@ -142,7 +142,7 @@ export function validateUserScript(userCode: string) {
         //   );
         // }
       },
-      MemberExpression(node) {
+      MemberExpression(_node) {
         // Check for any use of pm functions with restricted functionality
         // console.log("MemberExpression", node);
         // if (node.object.name === "pm") {
@@ -164,7 +164,7 @@ export function validateUserScript(userCode: string) {
       },
     });
   } catch (err: any) {
-    console.log(err);
+    // console.log(err);
     isValid = false;
     messages.push(`Error parsing code: ${err.message}`);
     markers.push({

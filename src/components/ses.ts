@@ -1,4 +1,5 @@
 import * as chai from "chai";
+import "ses";
 
 // pm.ts - Define the pm object to be used in the code execution.
 // Mock data from your API response
@@ -89,8 +90,7 @@ export const pm = {
   },
 };
 
-// Define the safe scope by isolating the global context
-export const safeEval = (
+export function executePostScriptCodeCompartment(
   code: string,
   responseData: {
     body: any;
@@ -100,32 +100,24 @@ export const safeEval = (
   },
   environmentVariables: Record<string, string | number>,
   propsContext: Record<any, any>,
-) => {
-  // Wrapping code in an async function to support await
-  const asyncCode = `(async () => { ${code} })()`;
-
-  const context = {
-    pm: {
-      ...pm,
-      environment: new Environment({}),
+) {
+  const c = new Compartment({
+    globals: {
+      console: console,
+      pm: {
+        ...pm,
+        environment: new Environment(environmentVariables),
+        response: simulateFetch(
+          responseData.body,
+          responseData.type,
+          new Headers(responseData.headers),
+        ),
+        ...propsContext,
+      },
     },
-    ...(propsContext || {}),
-  };
+    __options__: true,
+  });
 
-  if (environmentVariables) {
-    context.pm.environment = new Environment(environmentVariables);
-  }
-
-  if (responseData) {
-    context.pm.response = simulateFetch(
-      responseData.body,
-      responseData.type,
-      new Headers(responseData.headers),
-    );
-  }
-
-  return Function(
-    ...Object.keys(context),
-    `"use strict"; return ${asyncCode};`,
-  )(...Object.values(context));
-};
+  const asyncCode = `(async () => { ${code} })()`;
+  c.evaluate(asyncCode);
+}

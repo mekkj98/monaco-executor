@@ -37,11 +37,7 @@ const MonacoEditor: React.FC<{
             exist: () => void;
           };
         };
-        response: {
-          code: number;
-          responseTime: number;
-          json: () => any;
-        };
+        response: Response;
         environment: {
           get: (key: string) => any;
           set: (key: string, value: any) => void;

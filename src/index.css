@@ -1,0 +1,13 @@
+body,
+html {
+  padding: 0px;
+  margin: 0px;
+  height: 100%;
+  width: 100%;
+  font-family: Verdana, Geneva, Tahoma, sans-serif;
+  font-size: 1em;
+}
+
+h6 {
+  font-size: 1.1em;
+}
