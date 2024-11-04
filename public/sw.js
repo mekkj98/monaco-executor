@@ -43,11 +43,11 @@ function simulateFetch(
 
 const safeEval = async (code, context = {}) => {
   // Wrapping code in an async function to support await
-  const asyncCode = `(async () => { ${code} })()`;
+  const asyncCode = `(async () => { ${code} })();`;
 
   return Function(
     ...Object.keys(context),
-    `"use strict"; return ${asyncCode};`,
+    `"use strict"; return ${asyncCode}`,
   )(...Object.values(context));
 };
 
@@ -78,18 +78,41 @@ const globalPm = {
   },
 };
 
+class Environment {
+  variables = {};
+
+  constructor(variables) {
+    this.variables = variables;
+  }
+
+  set(key, value) {
+    this.variables[key] = value;
+
+    self.clients.matchAll().then((all) =>
+      all.forEach((client) => {
+        client.postMessage({ type: "setEnv", key: key, value: value });
+      }),
+    );
+  }
+
+  get(key) {
+    return this.variables[key];
+  }
+}
+
 // Listen for incoming messages (from main thread)
 self.addEventListener("message", async (event) => {
   const userCode = event.data.code;
-  const response = event.data.response;
+  const environmentVariables = event.data.environmentVariables;
+  const response = event.data.responseData;
 
   try {
     // Execute the user's code in a safe scope
     safeEval(userCode, {
-      console: console,
       pm: {
-        response: simulateFetch(response),
         ...globalPm,
+        response: simulateFetch(response.body, response.type, response.headers),
+        environment: new Environment(environmentVariables),
       },
     });
   } catch (err) {
