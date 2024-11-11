@@ -3,10 +3,17 @@ import MonacoEditor from "./components/editor";
 import { safeEval } from "./components/eval";
 import { validateUserScript } from "./libs/executor/validator";
 import { executePostScriptCodeCompartment } from "./components/ses";
+import { reverseValidateUserScript } from "./libs/executor/reverseValidator";
 
 export default function App() {
   const [code, setCode] =
-    useState(`// -- parsing response data and testing the response data --
+    useState(`// -- do something with custom function and identifier --
+async function getStatusCode() {
+  return Promise.resolve(200)
+}
+const statusCode = await getStatusCode();
+
+// -- parsing response data and testing the response data --
 const response = await pm.response.json()
 console.log(response)
 
@@ -111,11 +118,11 @@ pm.test("Response contains message", function () {
       setExecutionError("");
       window.removeEventListener("message", returnPostBack);
 
-      const result = validateUserScript(code);
+      const result = reverseValidateUserScript(code);
       if (!result.isValid) {
         setValidatorMessages(result.messages);
         setValidatorMarkers(result.markers);
-        return;
+        // return;
       }
 
       if (mode === "worker") {
